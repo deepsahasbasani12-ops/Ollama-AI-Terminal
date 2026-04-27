@@ -8,6 +8,9 @@ OutputBaseFilename=OllamaTerminalSetup
 Compression=lzma
 SolidCompression=yes
 
+[Dirs]
+Name: "{app}\Memory"
+
 [Files]
 Source: "dist\OllamaTerminal.exe"; DestDir: "{app}"; Flags: ignoreversion
 
