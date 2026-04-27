@@ -381,27 +381,27 @@ class OllamaAssistantGUI:
     def handle_open_app(self, app_name):
         """Handle opening an app from user command"""
         app_commands = {
-            "notepad": "notepad.exe",
-            "calculator": "calc.exe",
-            "calc": "calc.exe",
-            "explorer": "explorer.exe",
-            "file explorer": "explorer.exe",
-            "files": "explorer.exe",
-            "task manager": "taskmgr.exe",
-            "taskmgr": "taskmgr.exe",
-            "cmd": "start cmd.exe",
-            "command prompt": "start cmd.exe",
-            "powershell": "start powershell.exe",
-            "code": "code",
-            "vscode": "code",
-            "python": "python -m idlelib.idle",
-            "idle": "python -m idlelib.idle"
+            "notepad": ["notepad.exe"],
+            "calculator": ["calc.exe"],
+            "calc": ["calc.exe"],
+            "explorer": ["explorer.exe"],
+            "file explorer": ["explorer.exe"],
+            "files": ["explorer.exe"],
+            "task manager": ["taskmgr.exe"],
+            "taskmgr": ["taskmgr.exe"],
+            "cmd": ["cmd.exe"],
+            "command prompt": ["cmd.exe"],
+            "powershell": ["powershell.exe"],
+            "code": ["code"],
+            "vscode": ["code"],
+            "python": [sys.executable, "-m", "idlelib.idle"],
+            "idle": [sys.executable, "-m", "idlelib.idle"]
         }
         
         if app_name in app_commands:
             try:
                 cmd = app_commands[app_name]
-                subprocess.Popen(cmd, shell=True)
+                subprocess.Popen(cmd)
                 self.display_message("SYSTEM", f">> Opening: {app_name.upper()}", "assistant")
             except Exception as e:
                 self.display_message("ERROR", f"Failed to open {app_name}: {str(e)}", "error")
@@ -410,36 +410,7 @@ class OllamaAssistantGUI:
     
     def handle_close_app(self, app_name):
         """Handle closing an app from user command"""
-        app_processes = {
-            "notepad": "notepad.exe",
-            "calculator": "calc.exe",
-            "calc": "calc.exe",
-            "explorer": "explorer.exe",
-            "file explorer": "explorer.exe",
-            "files": "explorer.exe",
-            "task manager": "taskmgr.exe",
-            "taskmgr": "taskmgr.exe",
-            "cmd": "cmd.exe",
-            "command prompt": "cmd.exe",
-            "powershell": "powershell.exe",
-            "code": "code.exe",
-            "vscode": "code.exe",
-            "python": "python.exe",
-            "idle": "pythonw.exe",
-            "chrome": "chrome.exe",
-            "firefox": "firefox.exe",
-            "edge": "msedge.exe"
-        }
-        
-        if app_name in app_processes:
-            try:
-                process_name = app_processes[app_name]
-                subprocess.run(f"taskkill /IM {process_name} /F", shell=True)
-                self.display_message("SYSTEM", f">> Closed: {app_name.upper()}", "assistant")
-            except Exception as e:
-                self.display_message("ERROR", f"Failed to close {app_name}: {str(e)}", "error")
-        else:
-            self.display_message("ERROR", f"Unknown app: {app_name}. Try: notepad, calculator, cmd, powershell, code, etc.", "error")
+        self.display_message("SYSTEM", f">> Close app command disabled for security. Please close {app_name} manually.", "assistant")
     
     def get_ai_response(self):
         """Get response from Ollama AI with timing"""
@@ -571,10 +542,9 @@ class OllamaAssistantGUI:
             self.handle_close_app(app_name)
             return
         
-        # Check if user is trying to shutdown
+        # Check if user is trying to shutdown - command disabled for security
         if user_input.lower() == "shutdown":
-            self.display_message("SYSTEM", ">> Shutting down now...", "assistant")
-            subprocess.run("shutdown /s /t 0", shell=True)
+            self.display_message("SYSTEM", ">> Shutdown command disabled. Please shut down Windows manually using Start menu.", "assistant")
             return
         
         # Add to conversation history
