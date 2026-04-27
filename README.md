@@ -14,7 +14,7 @@ OllamaTerminalSetup.exe - releases page
 
 5. Use qwen2:0.5b model
 
-6. If you want better models, please run in command prompt - ollama pull (your model)
+6. If you want better models, please run in command prompt(after navigating to the folder where you downloaded the exe file) - ollama pull (your model)
 
 
 ## Requirements
