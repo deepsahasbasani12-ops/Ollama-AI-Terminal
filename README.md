@@ -10,7 +10,7 @@ OllamaTerminalSetup.exe - releases page
 
 3. Run installer
 
-4. Open the app
+4. Open the app(use 'Valley Forge' as password)
 
 5. Use qwen2:0.5b model
 
