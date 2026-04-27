@@ -1,5 +1,5 @@
 [Setup]
-AppName=Ollama AI Terminal
+AppName=Ollama Terminal
 AppVersion=1.0
 DefaultDirName={pf}\OllamaTerminal
 DefaultGroupName=OllamaTerminal
@@ -7,19 +7,16 @@ OutputDir=output
 OutputBaseFilename=OllamaTerminalSetup
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=admin
-AlwaysShowComponentsList=False
 
 [Files]
-Source: "OllamaTerminal.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\OllamaTerminal.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
-; Check if Ollama exists (optional warning)
+; Check if Ollama exists
 Filename: "cmd.exe"; Parameters: "/c ollama --version"; Flags: runhidden
 
-; Pull model (qwen2:0.5b)
-Filename: "cmd.exe"; Parameters: "/c ollama pull qwen2:0.5b"; StatusMsg: "Downloading AI model (~500MB)..."; Flags: waituntilterminated
+; Pull model (only model download happens here)
+Filename: "cmd.exe"; Parameters: "/c ollama pull qwen2:0.5b"; StatusMsg: "Downloading model qwen2:0.5b..."; Flags: waituntilterminated
 
 ; Launch your app
-Filename: "{app}\OllamaTerminal.exe"; Description: "Launch App"; Flags: nowait postinstall skipifsilent
-Filename: "{app}\OllamaTerminal.exe"; Description: "Launch App"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\OllamaTerminal.exe"; Flags: nowait postinstall skipifsilent
