@@ -472,6 +472,12 @@ class OllamaAssistantGUI:
                 with open(self.memory_file, 'r') as f:
                     self.conversation_history = json.load(f)
                 self.display_message("SYSTEM", f">> Memory loaded ({len(self.conversation_history)} messages)", "assistant")
+                # Display loaded messages
+                for msg in self.conversation_history:
+                    if msg["role"] == "user":
+                        self.display_message("You", msg["content"], "user")
+                    elif msg["role"] == "assistant":
+                        self.display_message("Assistant", msg["content"], "assistant")
             else:
                 self.display_message("SYSTEM", ">> No saved memory found. Starting fresh.", "assistant")
         except Exception as e:
