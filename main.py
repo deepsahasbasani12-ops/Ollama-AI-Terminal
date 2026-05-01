@@ -5,6 +5,8 @@ import threading
 import subprocess
 import json
 import os
+import sys
+import shutil
 from datetime import datetime
 
 
@@ -17,7 +19,11 @@ class OllamaAssistantGUI:
         self.conversation_history = []
         self.is_processing = False
         self.selected_model = tk.StringVar(value='qwen2:1.5b')
-        self.memory_file = "conversation_memory.json"
+        app_data_dir = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "OllamaTerminal")
+        os.makedirs(app_data_dir, exist_ok=True)
+        self.memory_file = os.path.join(app_data_dir, "conversation_memory.json")
+        self.ollama_binary = None
+        self.ollama_error = None
         
         # Password protection
         if not self.check_password():
@@ -26,6 +32,9 @@ class OllamaAssistantGUI:
         
         # Create GUI elements
         self.setup_ui()
+        
+        # Ensure Ollama is visible to this app, especially when running as an exe
+        self.configure_ollama_path()
         
         # Load saved conversation if exists (after UI is ready)
         self.load_memory()
@@ -182,6 +191,44 @@ class OllamaAssistantGUI:
         self.display_message("SYSTEM", ">> Ollama AI Terminal v1.0", "assistant")
         self.display_message("SYSTEM", ">> Ready to process your queries...", "assistant")
     
+    def configure_ollama_path(self):
+        """Find the Ollama executable and expose it to the packaged application."""
+        self.ollama_binary = shutil.which("ollama")
+        if not self.ollama_binary:
+            possible_paths = []
+            if sys.platform == "win32":
+                local_appdata = os.environ.get("LOCALAPPDATA", "")
+                program_files = os.environ.get("ProgramFiles", "")
+                program_files_x86 = os.environ.get("ProgramFiles(x86)", "")
+                user_profile = os.environ.get("USERPROFILE", "")
+                possible_paths.extend([
+                    os.path.join(local_appdata, "Programs", "Ollama", "ollama.exe"),
+                    os.path.join(program_files, "Ollama", "ollama.exe"),
+                    os.path.join(program_files_x86, "Ollama", "ollama.exe"),
+                    os.path.join(user_profile, ".ollama", "bin", "ollama.exe"),
+                ])
+            else:
+                possible_paths.extend([
+                    "/usr/local/bin/ollama",
+                    "/usr/bin/ollama",
+                    "/opt/homebrew/bin/ollama",
+                    os.path.expanduser("~/.ollama/bin/ollama"),
+                ])
+            for path in possible_paths:
+                if path and os.path.exists(path):
+                    self.ollama_binary = path
+                    break
+        if self.ollama_binary:
+            bin_dir = os.path.dirname(self.ollama_binary)
+            os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+            os.environ["OLLAMA_PATH"] = self.ollama_binary
+        else:
+            self.ollama_error = (
+                "Ollama executable not found. Install Ollama or place it on PATH, "
+                "then restart the app."
+            )
+            self.display_message("ERROR", self.ollama_error, "error")
+
     def check_password(self):
         """Prompt for password authentication with hacker style UI"""
         # Create password window
@@ -331,12 +378,6 @@ class OllamaAssistantGUI:
             self.handle_close_app(app_name)
             return
         
-        # Check if user is trying to shutdown
-        if user_input.lower() == "shutdown":
-            self.display_message("SYSTEM", ">> Shutting down now...", "assistant")
-            subprocess.run("shutdown /s /t 0", shell=True)
-            return
-        
         # Add to conversation history
         self.conversation_history.append({
             "role": "user",
@@ -355,27 +396,27 @@ class OllamaAssistantGUI:
     def handle_open_app(self, app_name):
         """Handle opening an app from user command"""
         app_commands = {
-            "notepad": "notepad.exe",
-            "calculator": "calc.exe",
-            "calc": "calc.exe",
-            "explorer": "explorer.exe",
-            "file explorer": "explorer.exe",
-            "files": "explorer.exe",
-            "task manager": "taskmgr.exe",
-            "taskmgr": "taskmgr.exe",
-            "cmd": "start cmd.exe",
-            "command prompt": "start cmd.exe",
-            "powershell": "start powershell.exe",
-            "code": "code",
-            "vscode": "code",
-            "python": "python -m idlelib.idle",
-            "idle": "python -m idlelib.idle"
+            "notepad": ["notepad.exe"],
+            "calculator": ["calc.exe"],
+            "calc": ["calc.exe"],
+            "explorer": ["explorer.exe"],
+            "file explorer": ["explorer.exe"],
+            "files": ["explorer.exe"],
+            "task manager": ["taskmgr.exe"],
+            "taskmgr": ["taskmgr.exe"],
+            "cmd": ["cmd.exe"],
+            "command prompt": ["cmd.exe"],
+            "powershell": ["powershell.exe"],
+            "code": ["code"],
+            "vscode": ["code"],
+            "python": [sys.executable, "-m", "idlelib.idle"],
+            "idle": [sys.executable, "-m", "idlelib.idle"]
         }
         
         if app_name in app_commands:
             try:
                 cmd = app_commands[app_name]
-                subprocess.Popen(cmd, shell=True)
+                subprocess.Popen(cmd)
                 self.display_message("SYSTEM", f">> Opening: {app_name.upper()}", "assistant")
             except Exception as e:
                 self.display_message("ERROR", f"Failed to open {app_name}: {str(e)}", "error")
@@ -408,7 +449,7 @@ class OllamaAssistantGUI:
         if app_name in app_processes:
             try:
                 process_name = app_processes[app_name]
-                subprocess.run(f"taskkill /IM {process_name} /F", shell=True)
+                subprocess.run(["taskkill", "/IM", process_name], check=False)
                 self.display_message("SYSTEM", f">> Closed: {app_name.upper()}", "assistant")
             except Exception as e:
                 self.display_message("ERROR", f"Failed to close {app_name}: {str(e)}", "error")
@@ -416,16 +457,40 @@ class OllamaAssistantGUI:
             self.display_message("ERROR", f"Unknown app: {app_name}. Try: notepad, calculator, cmd, powershell, code, etc.", "error")
     
     def get_ai_response(self):
-        """Get response from Ollama AI"""
+        """Get response from Ollama AI via CLI or Python module"""
         try:
-            selected_model = self.selected_model.get()
-            response = ollama.chat(
-                model=selected_model,
-                messages=self.conversation_history,
-                stream=False
-            )
+            if self.ollama_error:
+                raise RuntimeError(self.ollama_error)
             
-            assistant_message = response['message']['content']
+            selected_model = self.selected_model.get()
+            
+            # Try Python module first
+            try:
+                response = ollama.chat(
+                    model=selected_model,
+                    messages=self.conversation_history,
+                    stream=False
+                )
+                assistant_message = response['message']['content']
+            except (ImportError, ModuleNotFoundError):
+                # Fallback: use Ollama CLI directly
+                if not self.ollama_binary:
+                    raise RuntimeError("Ollama CLI not found and Python module unavailable")
+                
+                import json as json_module
+                messages_json = json_module.dumps(self.conversation_history)
+                result = subprocess.run(
+                    [self.ollama_binary, "run", selected_model, "--nostream"],
+                    input=messages_json,
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                
+                if result.returncode != 0:
+                    raise RuntimeError(f"Ollama CLI error: {result.stderr}")
+                
+                assistant_message = result.stdout.strip()
             
             # Add to conversation history
             self.conversation_history.append({
@@ -437,8 +502,12 @@ class OllamaAssistantGUI:
             self.root.after(0, lambda: self.display_message("Assistant", assistant_message, "assistant"))
             
         except Exception as e:
-            error_message = f"Error: {str(e)}\nMake sure Ollama is running and qwen2:1.5b model is installed."
-            self.root.after(0, lambda: self.display_message("Error", error_message, "error"))
+            selected_model = self.selected_model.get()
+            error_message = (
+                f"Error calling Ollama with model {selected_model}:\n{str(e)}\n"
+                "Make sure Ollama is running and the selected model is installed."
+            )
+            self.root.after(0, lambda: self.display_message("SYSTEM", error_message, "error"))
         
         finally:
             # Re-enable send button
@@ -489,3 +558,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = OllamaAssistantGUI(root)
     root.mainloop()
+
