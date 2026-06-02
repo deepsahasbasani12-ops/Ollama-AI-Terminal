@@ -691,15 +691,21 @@ class OllamaAssistantGUI:
         self.display_message("You", user_input, "user")
         self.input_field.delete(0, tk.END)
         
+        # Check if user is asking for help
+        normalized = user_input.lower().strip()
+        if normalized in ("help", "commands"):
+            self.handle_help_command()
+            return
+        
         # Check if user is trying to open an app
-        if user_input.lower().startswith("open "):
-            app_name = user_input[5:].strip().lower()
+        if normalized.startswith("open "):
+            app_name = normalized[5:].strip().lower()
             self.handle_open_app(app_name)
             return
         
         # Check if user is trying to close an app
-        if user_input.lower().startswith("close "):
-            app_name = user_input[6:].strip().lower()
+        if normalized.startswith("close "):
+            app_name = normalized[6:].strip().lower()
             self.handle_close_app(app_name)
             return
         
@@ -803,6 +809,27 @@ class OllamaAssistantGUI:
                 self.display_message("ERROR", f"Failed to close {app_name}: {str(e)}", "error")
         else:
             self.display_message("ERROR", f"Unknown app: {app_name}. Try: notepad, calculator, cmd, powershell, code, etc.", "error")
+    
+    def handle_help_command(self):
+        """Display help for commands, model selection, and downloads."""
+        help_text = (
+            "Commands:\n"
+            "  help | commands - Show this help text\n"
+            "  open <app> - Open apps like notepad, calculator, explorer, cmd, powershell, code, python\n"
+            "  close <app> - Close apps like notepad, calculator, explorer, cmd, powershell, code\n"
+            "\n"
+            "Model guide:\n"
+            "  Use the model dropdown to choose a model. If the selected model is not installed, the app will prompt you to download it.\n"
+            "  Download may take several minutes for larger models.\n"
+            "\n"
+            "Best models by category:\n"
+            "  Lightweight: qwen2:0.5b, phi3:mini\n"
+            "  Best balance: qwen3.5:0.8b, deepseek-coder:1.3b\n"
+            "  Heaviest: qwen3.5:2b, gemma:2b\n"
+            "\n"
+            "Tip: Switch models from the dropdown, then ask a question or type a command. If the model is missing, choose Yes to download it."
+        )
+        self.display_message("SYSTEM", help_text, "assistant")
     
     def get_ai_response(self):
         """Get response from Ollama AI via CLI or Python module"""
@@ -968,4 +995,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = OllamaAssistantGUI(root)
     root.mainloop()
-
